@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+# dsniffd ipupdown pre-up, up, down post-down here in ./debian are symlinks
+ 
+set -e
+
+case "$MODE" in
+
+	start)
+		:
+	;;
+
+	stop)
+		[ $IFACE != "--all" ] && dsniffd -i $IFACE stop
+	;;
+
+esac
+

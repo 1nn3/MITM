@@ -1,0 +1,15 @@
+Source: mitm 
+Maintainer: user <user@host>
+Build-Depends: debhelper (>= 9)
+Priority: optional
+Section: net
+Standards-Version: 3.9.8
+
+Package: mitm
+Architecture: all
+Depends: daemonize, db5.3-util, dsniff, thc-ipv6, ${misc:Depends}, ${shlibs:Depends}
+Suggests: tcpdump, tshark
+Description: MITM
+ A man-in-the-middle attack (MITM) and a password sniffer
+ (just some wrapper around the tools from the packages dsniff and thc-ipv6).
+

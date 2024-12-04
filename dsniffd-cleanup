@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# @weekly dsniffd-cleanup
+
+#set -x
+set -e
+
+export LANG
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
+
+cat /var/tmp/dsniffd.out.txt && >/var/tmp/dsniffd.out.txt
+
