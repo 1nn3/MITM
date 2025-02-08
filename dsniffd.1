@@ -1,0 +1,53 @@
+.\" Manpage for dsniffd by user <user@host>
+
+.TH "dsniffd" "1" "2013-12-04" "user" "MITM"
+
+.SH NAME
+
+dsniffd - A daemonized dsniff and more
+
+.SH SYNOPSIS
+
+.nf
+dsniffd -i <interface>
+
+.SH DESCRIPTION
+
+A ifupdown script to start dsniff on every interface thats up. The
+results are in /var/tmp/dsniffd.$if/dsniff.$if.db as Berkeley databases.
+
+.SH MODES
+
+.SS start
+
+Start the daemon.
+
+.SS stop
+
+Stop the daemon.
+
+.SH OPTIONS
+
+.SS -i <interface>
+
+The interface name.
+
+.SH ENVIRONMENT
+
+.SS CONNECTION
+
+NetworkManager connection to use.
+
+.SH EXAMPLES
+
+.SS Write session database to flat-text format
+
+.nf
+db5.3_dump path/to/file.db
+
+.SH FILES
+
+.SS /var/tmp/dsniffd.out.txt
+
+Newer file with the results of dsniff.
+

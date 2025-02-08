@@ -1,0 +1,118 @@
+#!/usr/bin/env sh
+
+#set -x
+set -e
+
+export LANG="C"
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
+
+test -r config \
+	&& source config
+
+usage () {
+	cat <<! 1>&2
+Usage: $0 <start|stop|status> ;-)
+!
+	exit 1
+}
+startup () {
+	local fake_mac="$@"
+
+	sysctl -w "net.ipv6.conf.$if.forwarding=1"
+
+	ip6tables -I FORWARD -j ACCEPT
+	ip6tables -t nat -I POSTROUTING -o "$if" -j MASQUERADE
+
+	daemonize -e $log -o $log -c $dir -l $parasite6_pid -p $parasite6_pid -u root /usr/bin/atk6-parasite6 $if "$fake_mac"
+}
+cleanup () {
+	pkill -F $parasite6_pid
+	sysctl -w "net.ipv6.conf.$if.forwarding=0"
+	ip6tables -D FORWARD 1
+	ip6tables -t nat -D POSTROUTING 1
+}
+status () {
+	tail $log
+}
+
+cd ~/.mitmproxy/ || exit
+
+dir="/tmp/`basename "$0"`"
+mkdir -p $dir && cd $dir
+pwd
+
+parasite6_pid="parasite6.pid"
+log="$(basename "$0").log"
+
+# check write permissions amongst other things
+touch $dir $parasite6_pid $log
+
+# Interface
+con=${CONNECTION:-`nmcli -g uuid,state connection | awk -F ':' '$2=="activated" {print $1; exit}'`}
+if=${if:-`nmcli -t connection show $con | sed -n -E "/^GENERAL\.DEVICES:/s///p"`}
+
+TEMP=$(getopt -o 'hi:' --long 'help,interface:' -n "$0" -- "$@")
+
+if [ $? -ne 0 ]; then
+	usage
+	echo 'Terminating...' >&2
+	exit 1
+fi
+
+# Note the quotes around "$TEMP": they are essential!
+eval set -- "$TEMP"
+unset TEMP
+
+while true; do
+	case "$1" in
+		'-h'|'--help')
+			echo 'Option -h, --help'
+			shift 1
+			usage
+			exit
+		;;
+		'-i'|'--interface')
+			echo "Option -i, --interface; argument '$2'"
+			if="$2"
+			shift 2
+			continue
+		;;
+		'--')
+			shift
+			break
+		;;
+		*)
+			echo 'Internal error!' >&2
+			exit 1
+		;;
+	esac
+done
+
+echo 'Remaining arguments:'
+for arg; do
+	echo "--> '$arg'"
+done
+
+if [ ! "$if" ]; then
+	echo "Konnte Interface nicht ermitteln :-(" 1>&2
+	exit 1
+else
+	echo "Interface ($if) ermittelt :-)"
+fi
+
+case "$1" in
+	start)
+		shift
+		startup "$@"
+	;;
+	stop)
+		cleanup
+	;;
+	status)
+		status
+	;;
+	*)
+		usage
+	;;
+esac
+

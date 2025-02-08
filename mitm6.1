@@ -1,0 +1,46 @@
+.\" Manpage for mitm6 by user <user@host>
+
+.TH "mitm6" "1" "2013-12-04" "user" "MITM"
+
+.SH NAME
+
+mitm6 - MITM IPv6
+
+.SH SYNOPSIS
+
+.nf
+mitm6 <start|stop>
+
+Without NetworkManager(8) you need to give the interface:
+
+.nf
+mitm6 -i <interface> <start|stop>
+
+.SH MODES
+
+.SS start
+
+Start the MITM attack.
+
+.SS stop
+
+Stop the MITM attack.
+
+.SH OPTIONS
+
+.SS -i <interface>
+
+The interface name.
+
+.SH ENVIRONMENT
+
+.SS CONNECTION
+
+NetworkManager connection to use.
+
+.SS if
+
+Interface name to use.
+
+.SS SEE ALSO
+

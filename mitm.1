@@ -1,0 +1,105 @@
+.\" Manpage for mitm by user <user@host>
+
+.TH "mitm" "1" "2013-12-04" "user" "MITM"
+
+.SH NAME
+
+mitm - MITM IPv4
+
+.SH SYNOPSIS
+
+.nf
+mitm <start|stop>
+
+Without NetworkManager(8) you need to give the interface and gateway:
+
+.nf
+mitm -i <interface> -g <gateway> <start|stop>
+
+.SH MODES
+
+.SS start
+
+Start the MITM attack.
+
+.SS stop
+
+Stop the MITM attack.
+
+.SH OPTIONS
+
+.SS -i <interface>
+
+The interface name.
+
+.SS -g <gateway>
+
+Gateway IP address.
+
+.SH EXAMPLE
+
+.SS Vicitms
+
+Instad of all hosts add the IP address of a victim/target:
+
+.nf
+mitm start -- -t <victim> [-t <victim…>]
+
+To poison both hosts (gateway and victim/target) and capture traffic in both directions add -r (only valid in conjuntion with -t):
+
+.nf
+mitm start -- -t <victim> [-t <victim…>] [-r]
+
+Find victims:
+
+.nf
+lsip | xargs nmap -sn
+
+.SS Sniff HTTP requests in Common Log Format
+
+.nf
+urlsnarf -i <interface>
+
+On the victim:
+.nf
+wget -O /dev/null http://neverssl.com
+
+.SS A password sniffer
+.nf
+dsniff -i <interface>
+
+.SS Watch DNS querys
+
+.nf
+tcpdump -i <interface> port 53
+
+.SS HTTP analysis with tshark(1)
+
+In the following example, we extract data from any HTTP requests that are seen. Using the -T we specify we want to extract fields, and with the -e options we identify which fields we want to extract.
+
+.nf
+tshark -i <interface> -Y http.request -T fields -e http.host -e http.user_agent -N nN
+
+Here is a tested and working solution for HTTPS:
+
+.nf
+tshark -i <interface> -Y ssl.handshake.extensions_server_name -N nN
+
+.SH ENVIRONMENT
+
+.SS CONNECTION
+
+NetworkManager connection to use.
+
+.SS if
+
+Interface name to use.
+
+.SS gw
+
+Gateway IPv4 address to use.
+
+.SS SEE ALSO
+
+dsniff(8), tcpdump(8), tshark(1)
+
